@@ -52,14 +52,39 @@ export default function CampaignDetailPage() {
 
   // Fetch threads from AgentMail
   useEffect(() => {
-    if (!campaignId || !isRunning) {
+    if (!campaignId || !isRunning || !agents || agents.length === 0) {
       return;
     }
 
     const fetchThreads = async () => {
       setIsLoadingThreads(true);
       try {
-        const response = await fetch(`/api/campaigns/${campaignId}/threads`);
+        // Prepare agents data to send to API route
+        const agentsData = agents
+          .filter((agent) => agent.inboxId && agent.targetCandidate?.email)
+          .map((agent) => ({
+            inboxId: agent.inboxId,
+            email: agent.email,
+            targetCandidate: {
+              email: agent.targetCandidate?.email,
+              name: agent.targetCandidate?.name,
+            },
+          }));
+
+        if (agentsData.length === 0) {
+          setThreads([]);
+          setIsLoadingThreads(false);
+          return;
+        }
+
+        const response = await fetch(`/api/campaigns/${campaignId}/threads`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ agents: agentsData }),
+        });
+
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({ error: 'Failed to fetch threads' }));
           throw new Error(errorData.error || `Failed to fetch threads: ${response.status} ${response.statusText}`);
@@ -82,7 +107,7 @@ export default function CampaignDetailPage() {
     const interval = setInterval(fetchThreads, 30000);
     return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [campaignId, isRunning]);
+  }, [campaignId, isRunning, agents]);
 
   // Helper function to format timestamp
   const formatTimestamp = (timestamp: string) => {

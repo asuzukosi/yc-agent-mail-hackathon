@@ -4,7 +4,7 @@ This agent processes voice and chat messages from the frontend for recruitment m
 """
 import logging
 import os
-import httpx
+import requests
 from dotenv import load_dotenv
 from livekit.agents import (
     Agent,
@@ -198,30 +198,6 @@ class RecruitmentAssistant(Agent):
         )
 
     @function_tool
-    async def lookup_job_details(self, context: RunContext, job_title: str):
-        """Use this tool to look up details about a specific job title or role.
-        Args:
-            job_title: The job title or role to look up information for
-        """
-        logger.info(f"Looking up job details for {job_title}")
-        return f"Details about the {job_title} position are available. This is a great opportunity with competitive benefits."
-
-    @function_tool
-    async def schedule_follow_up(self, context: RunContext, candidate_email: str, meeting_time: str):
-        """Use this tool to schedule a follow-up meeting with a candidate.
-        Args:
-            candidate_email: The email address of the candidate
-            meeting_time: The proposed meeting time
-        """
-        try:
-            logger.info(f"Scheduling follow-up meeting with {candidate_email} for {meeting_time}")
-            # Simplified scheduling function - just returns success message
-            return f"Follow-up meeting scheduled with {candidate_email} for {meeting_time}"
-        except Exception as e:
-            logger.error(f"Error scheduling meeting: {e}")
-            return f"Error scheduling meeting: {e}"
-
-    @function_tool
     async def get_knowledge(self, context: RunContext, query: str, campaign_id: str):
         """Use this tool to query knowledge about a campaign, its candidates, and related information.
         This tool searches through campaign context, candidate data, and market research to provide answers.
@@ -231,24 +207,19 @@ class RecruitmentAssistant(Agent):
         """
         try:
             logger.info(f"Querying knowledge: {query} for campaign: {campaign_id}")
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    f"{API_BASE_URL}/api/get-knowledge",
-                    json={
-                        "query": query,
-                        "campaignId": campaign_id,
-                    },
-                    timeout=30.0,
-                )
-                response.raise_for_status()
-                data = response.json()
-                answer = data.get("answer", "No answer available")
-                logger.info(f"Knowledge query response: {answer[:100]}...")
-                return answer
-        except httpx.HTTPStatusError as e:
-            error_msg = f"HTTP error {e.response.status_code}: {e.response.text}"
-            logger.error(f"Error querying knowledge: {error_msg}")
-            return f"Error querying knowledge: {error_msg}"
+            response = requests.post(
+                f"{API_BASE_URL}/api/get-knowledge",
+                json={
+                    "query": query,
+                    "campaignId": campaign_id,
+                },
+                timeout=30.0,
+            )
+            response.raise_for_status()
+            data = response.json()
+            answer = data.get("answer", "No answer available")
+            logger.info(f"Knowledge query response: {answer[:100]}...")
+            return answer
         except Exception as e:
             logger.error(f"Error querying knowledge: {e}")
             return f"Error querying knowledge: {str(e)}"
@@ -262,20 +233,14 @@ class RecruitmentAssistant(Agent):
         """
         try:
             logger.info(f"Ending meeting: {meeting_id}")
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    f"{API_BASE_URL}/api/meetings/end",
-                    json={"meetingId": meeting_id},
-                    timeout=30.0,
-                )
-                response.raise_for_status()
-                data = response.json()
-                logger.info(f"Meeting ended successfully: {meeting_id}")
-                return f"Meeting {meeting_id} has been marked as completed."
-        except httpx.HTTPStatusError as e:
-            error_msg = f"HTTP error {e.response.status_code}: {e.response.text}"
-            logger.error(f"Error ending meeting: {error_msg}")
-            return f"Error ending meeting: {error_msg}"
+            response = requests.post(
+                f"{API_BASE_URL}/api/meetings/end",
+                json={"meetingId": meeting_id},
+                timeout=30.0,
+            )
+            response.raise_for_status()
+            logger.info(f"Meeting ended successfully: {meeting_id}")
+            return f"Meeting {meeting_id} has been marked as completed."
         except Exception as e:
             logger.error(f"Error ending meeting: {e}")
             return f"Error ending meeting: {str(e)}"
@@ -290,23 +255,17 @@ class RecruitmentAssistant(Agent):
         """
         try:
             logger.info(f"Sending meeting summary for meeting: {meeting_id}")
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    f"{API_BASE_URL}/api/meetings/summary",
-                    json={
-                        "meetingId": meeting_id,
-                        "summary": summary,
-                    },
-                    timeout=30.0,
-                )
-                response.raise_for_status()
-                data = response.json()
-                logger.info(f"Meeting summary saved successfully: {meeting_id}")
-                return f"Meeting summary saved successfully for meeting {meeting_id}."
-        except httpx.HTTPStatusError as e:
-            error_msg = f"HTTP error {e.response.status_code}: {e.response.text}"
-            logger.error(f"Error sending meeting summary: {error_msg}")
-            return f"Error sending meeting summary: {error_msg}"
+            response = requests.post(
+                f"{API_BASE_URL}/api/meetings/summary",
+                json={
+                    "meetingId": meeting_id,
+                    "summary": summary,
+                },
+                timeout=30.0,
+            )
+            response.raise_for_status()
+            logger.info(f"Meeting summary saved successfully: {meeting_id}")
+            return f"Meeting summary saved successfully for meeting {meeting_id}."
         except Exception as e:
             logger.error(f"Error sending meeting summary: {e}")
             return f"Error sending meeting summary: {str(e)}"
@@ -320,20 +279,14 @@ class RecruitmentAssistant(Agent):
         """
         try:
             logger.info(f"Marking candidate as accepted for meeting: {meeting_id}")
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    f"{API_BASE_URL}/api/candidates/accepted",
-                    json={"meetingId": meeting_id},
-                    timeout=30.0,
-                )
-                response.raise_for_status()
-                data = response.json()
-                logger.info(f"Candidate accepted successfully for meeting: {meeting_id}")
-                return f"Candidate has been marked as accepted and their agent has been stopped for meeting {meeting_id}."
-        except httpx.HTTPStatusError as e:
-            error_msg = f"HTTP error {e.response.status_code}: {e.response.text}"
-            logger.error(f"Error accepting candidate: {error_msg}")
-            return f"Error accepting candidate: {error_msg}"
+            response = requests.post(
+                f"{API_BASE_URL}/api/candidates/accepted",
+                json={"meetingId": meeting_id},
+                timeout=30.0,
+            )
+            response.raise_for_status()
+            logger.info(f"Candidate accepted successfully for meeting: {meeting_id}")
+            return f"Candidate has been marked as accepted and their agent has been stopped for meeting {meeting_id}."
         except Exception as e:
             logger.error(f"Error accepting candidate: {e}")
             return f"Error accepting candidate: {str(e)}"

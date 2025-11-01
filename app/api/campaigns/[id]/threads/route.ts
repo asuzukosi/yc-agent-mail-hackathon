@@ -1,42 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ConvexHttpClient } from 'convex/browser';
-import { api } from '@/convex/_generated/api';
 import { listThreads, listMessages } from '@/lib/agentmail-client';
 
 /**
  * Get Campaign Threads API Route
  * 
  * Fetches all email threads and messages for a campaign from AgentMail:
- * 1. Gets all agents for the campaign from Convex
+ * 1. Receives agent data from client (with inboxIds)
  * 2. Fetches threads and messages from AgentMail for each inbox
  * 3. Maps the data to our format
  * 4. Returns combined threads sorted by most recent activity
  */
-export async function GET(
+export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: campaignId } = await params;
 
   try {
-    // Validate environment variable
-    const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
-    if (!convexUrl) {
-      console.error('NEXT_PUBLIC_CONVEX_URL is not set');
-      return NextResponse.json(
-        { error: 'Server configuration error: Convex URL not configured' },
-        { status: 500 }
-      );
-    }
+    // Get agents data from request body
+    const { agents } = await request.json();
 
-    const convexClient = new ConvexHttpClient(convexUrl);
-
-    // Get all agents for this campaign
-    const agents = await convexClient.query(api.agents.getAgentsByCampaign, {
-      campaignId: campaignId as any,
-    });
-
-    if (!agents || agents.length === 0) {
+    if (!agents || !Array.isArray(agents) || agents.length === 0) {
       return NextResponse.json({ threads: [] });
     }
 
@@ -136,7 +120,7 @@ export async function GET(
           }
         }
       } catch (error) {
-        console.error(`Error fetching threads for agent ${agent._id}:`, error);
+        console.error(`Error fetching threads for agent inbox ${agent.inboxId}:`, error);
       }
     }
 

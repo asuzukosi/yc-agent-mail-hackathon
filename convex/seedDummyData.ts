@@ -160,3 +160,115 @@ Ideal candidates typically have:
   },
 });
 
+/**
+ * Seed dummy agents and meetings for existing candidates
+ * Run this with: npx convex run seedDummyData:seedDummyMeetings
+ * Make sure to run seedDummyData first!
+ */
+export const seedDummyMeetings = mutation({
+  args: {},
+  handler: async (ctx) => {
+    console.log('🌱 Starting to seed dummy agents and meetings...');
+
+    // First, get all campaigns
+    const campaigns = await ctx.db.query('campaigns').collect();
+    
+    if (campaigns.length === 0) {
+      console.log('❌ No campaigns found. Please run seedDummyData first!');
+      return {
+        success: false,
+        message: 'No campaigns found. Please run seedDummyData first!',
+      };
+    }
+
+    const campaign = campaigns[0];
+    console.log(`📋 Using campaign: ${campaign._id}`);
+
+    // Get candidates for this campaign
+    const candidates = await ctx.db
+      .query('candidates')
+      .withIndex('by_campaign', (q) => q.eq('campaignId', campaign._id))
+      .collect();
+
+    if (candidates.length < 2) {
+      console.log('❌ Not enough candidates found. Please run seedDummyData first!');
+      return {
+        success: false,
+        message: 'Not enough candidates found. Please run seedDummyData first!',
+      };
+    }
+
+    // Create agents and meetings for the first 2 candidates
+    const meetingIds = [];
+    
+    for (let i = 0; i < Math.min(2, candidates.length); i++) {
+      const candidate = candidates[i];
+      
+      // Create an agent for this candidate
+      const agentId = await ctx.db.insert('agents', {
+        campaignId: campaign._id,
+        email: `agent-${candidate.name.toLowerCase().replace(' ', '-')}@recruitment.ai`,
+        target: candidate._id,
+        inboxId: `inbox-${candidate._id}`,
+        status: 'active',
+        createdAt: Date.now(),
+      });
+      
+      console.log(`✅ Created agent: ${agentId} for candidate ${candidate.name}`);
+
+      // Create a meeting for this candidate
+      const meetingId = await ctx.db.insert('meetings', {
+        campaignId: campaign._id,
+        candidateId: candidate._id,
+        agentId: agentId,
+        status: 'pending',
+        scheduledAt: Date.now() + (i * 24 * 60 * 60 * 1000), // Schedule meetings 1 day apart
+        createdAt: Date.now(),
+      });
+      
+      meetingIds.push(meetingId);
+      console.log(`✅ Created meeting: ${meetingId} for candidate ${candidate.name}`);
+    }
+
+    console.log(`🎉 Successfully seeded dummy agents and meetings!`);
+    console.log(`   Campaign: ${campaign._id}`);
+    console.log(`   Meetings: ${meetingIds.length}`);
+    console.log(`\n🔗 Meeting URLs:`);
+    meetingIds.forEach((meetingId, idx) => {
+      console.log(`   Meeting ${idx + 1}: http://localhost:3000/meetings/${meetingId}`);
+    });
+
+    return {
+      success: true,
+      campaignId: campaign._id,
+      meetingIds,
+    };
+  },
+});
+
+/**
+ * Get all meetings for a campaign (query helper)
+ */
+export const getAllMeetings = query({
+  args: {},
+  handler: async (ctx) => {
+    const meetings = await ctx.db.query('meetings').collect();
+    
+    const enrichedMeetings = await Promise.all(
+      meetings.map(async (meeting) => {
+        const campaign = await ctx.db.get(meeting.campaignId);
+        const candidate = await ctx.db.get(meeting.candidateId);
+        const agent = await ctx.db.get(meeting.agentId);
+        
+        return {
+          ...meeting,
+          campaign: campaign ? { _id: campaign._id, name: campaign.name } : null,
+          candidate: candidate ? { _id: candidate._id, name: candidate.name } : null,
+          agent: agent ? { _id: agent._id, email: agent.email } : null,
+        };
+      })
+    );
+    
+    return enrichedMeetings;
+  },
+});
