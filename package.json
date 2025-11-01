@@ -1,0 +1,81 @@
+{
+  "name": "credentials-search",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "convex:dev": "convex dev",
+    "convex:deploy": "convex deploy",
+    "seed:data": "convex run seedDummyData:seedDummyData"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^1.3.24",
+    "@composio/core": "^0.2.2",
+    "@composio/openai-agents": "^0.2.2",
+    "@livekit/components-react": "^2.9.15",
+    "@livekit/protocol": "^1.40.0",
+    "@mastra/core": "latest",
+    "@mastra/libsql": "latest",
+    "@mastra/loggers": "latest",
+    "@mastra/memory": "latest",
+    "@openai/agents": "^0.2.1",
+    "@perplexity-ai/perplexity_ai": "latest",
+    "@phosphor-icons/react": "^2.1.8",
+    "@radix-ui/react-label": "^2.1.0",
+    "@radix-ui/react-select": "^2.2.5",
+    "@radix-ui/react-slot": "^1.1.0",
+    "@radix-ui/react-toggle": "^1.1.9",
+    "agentmail": "^0.1.4",
+    "ai": "^5.0.0",
+    "browser-use-sdk": "^2.0.4",
+    "buffer-image-size": "^0.6.4",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "convex": "^1.18.2",
+    "dotenv": "^16.6.1",
+    "hyperspell": "^0.26.0",
+    "jose": "^6.0.12",
+    "livekit-client": "^2.15.8",
+    "livekit-server-sdk": "^2.13.2",
+    "lucide-react": "^0.468.0",
+    "mime": "^4.0.7",
+    "motion": "^12.16.0",
+    "next": "15.5.2",
+    "openai": "^6.7.0",
+    "pdf2json": "^3.1.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-markdown": "^10.1.0",
+    "sonner": "^2.0.3",
+    "tailwind-merge": "^2.6.0",
+    "tailwindcss-animate": "^1.0.7",
+    "zod": "^3.25.76",
+    "zod-to-json-schema": "^3.24.6"
+  },
+  "devDependencies": {
+    "@tailwindcss/typography": "^0.5.19",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9",
+    "eslint-config-next": "15.5.2",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5"
+  },
+  "overrides": {
+    "browser-use-sdk": {
+      "zod": "^3.25.76"
+    }
+  },
+  "pnpm": {
+    "overrides": {
+      "browser-use-sdk>zod": "^3.25.76"
+    }
+  },
+  "packageManager": "pnpm@9.15.9"
+}
