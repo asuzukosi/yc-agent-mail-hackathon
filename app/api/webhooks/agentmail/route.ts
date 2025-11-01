@@ -181,68 +181,21 @@ export async function POST(request: NextRequest) {
 
     // Generate response using Mastra agent
     console.log(`[${requestId}] 💭 Generating AI response...`);
-    const systemPrompt = `You are an elite, highly persuasive recruitment agent using advanced psychological techniques. You have been engaging with a candidate about a job opportunity. Your goal is to systematically dismantle resistance and create an irresistible pull toward accepting this role.
+    const systemPrompt = `You are a persuasive recruitment agent. Write a SHORT, engaging email response to ${context.candidate.name} about the ${context.campaign.name} opportunity.
 
-CAMPAIGN CONTEXT:
-- Campaign Name: ${context.campaign.name}
-- Job Description: ${context.campaign.jobDescription}
-- Market Research: ${context.campaign.perplexityResearch}
-- Keywords: ${context.campaign.keywords}
+CANDIDATE: ${context.candidate.name}, ${context.candidate.title || ''} at ${context.candidate.company || ''}
+OPPORTUNITY: ${context.campaign.name}
 
-CANDIDATE CONTEXT:
-- Name: ${context.candidate.name}
-- Current Title: ${context.candidate.title || 'Not specified'}
-- Company: ${context.candidate.company || 'Not specified'}
-- Email: ${context.candidate.email || 'Not specified'}
+RECENT MESSAGE FROM CANDIDATE:
+"${context.currentMessage.text}"
 
-CONVERSATION HISTORY:
-${context.thread.messages.map((msg: any, idx: number) => `
-Message ${idx + 1}:
-From: ${msg.from}
-To: ${msg.to}
-Subject: ${msg.subject}
-Content: ${msg.text}
-Time: ${msg.createdAt}
-`).join('\n')}
+IMPORTANT:
+- Keep it SHORT (100-200 words max)
+- Be conversational and persuasive, not pushy
+- Address their specific message with emotional intelligence
+- End with a clear call to action
 
-CURRENT MESSAGE FROM CANDIDATE:
-Subject: ${context.currentMessage.subject}
-Content: ${context.currentMessage.text}
-
-ADVANCED PERSUASION TASKS:
-1. Analyze the candidate's current message for emotional tone, hesitations, or concerns
-2. If they're agreeing to take the role: Congratulate them enthusiastically, position them as chosen, and provide clear next steps
-3. If they want to learn more or schedule: Provide highly compelling information, use social proof, create urgency, and make scheduling feel inevitable
-4. If they seem hesitant: Use advanced psychological reframing techniques:
-   - Validate their concerns without agreeing ("I understand you're being thoughtful about this")
-   - Reframe objections as proof of their intelligence and careful consideration
-   - Use cognitive dissonance: Question if their current role is truly maximizing their potential
-   - Introduce doubt about their current path: Gently highlight what might be missing
-   - Use loss aversion: Emphasize what they'll lose by staying (growth, opportunity, trajectory)
-   - Apply social proof: Mention other top candidates who've accepted or similar professionals who transformed their careers
-   - Create identity shift: Position them as someone ready for this next level
-   - Use future pacing: Paint detailed picture of their success in this role
-   - Frame accepting as brave and rejecting as fear-based
-   - Apply gentle pressure: "These opportunities don't wait," "We're making decisions soon"
-
-ADVANCED LANGUAGE PATTERNS:
-- Use assumptive language: "When you start..." instead of "If you accept..."
-- Employ power words: "exclusive," "transformative," "game-changing," "unprecedented"
-- Create urgency: "We're in final rounds," "Limited spots," "Time-sensitive"
-- Use inclusive language: "People like you," "This was meant for someone with your background"
-- Apply false uniqueness: "You're one of the few candidates who truly matches this role"
-- Frame as necessity: "Your career has been building toward this," "This is your next evolution"
-
-RESPONSE REQUIREMENTS:
-- Keep responses concise, engaging, and psychologically compelling (150-300 words)
-- Always maintain professional, enthusiastic, and magnetic tone
-- Never be pushy or aggressive - be irresistibly persuasive
-- Use emotional intelligence to read their state and adjust
-- Focus on their transformation and identity shift, not just a job change
-- Make declining feel unimaginable by systematically addressing every concern
-- Position this as an inevitable next step in their evolution
-
-Generate an appropriate response email that uses these advanced persuasion techniques to maximize conversion.`;
+Write ONLY the email body text, nothing else. No subject, no JSON, no explanations.`;
 
     const response = await persuasionAgent.generate([
       {
@@ -251,16 +204,28 @@ Generate an appropriate response email that uses these advanced persuasion techn
       },
     ]);
 
-    const responseText = response.text || 'Thank you for your interest! Let me know if you have any questions.';
+    let responseText = response.text || 'Thank you for your interest! Let me know if you have any questions.';
+    
+    // Clean up the response text - remove any JSON wrappers, markdown, or extra formatting
+    responseText = responseText.trim();
+    
+    // Remove common wrapper patterns
+    responseText = responseText.replace(/^```[\s\S]*?```/gm, ''); // Remove code blocks
+    responseText = responseText.replace(/^"([\s\S]*)"$/s, '$1'); // Remove quotes
+    responseText = responseText.replace(/^\{[\s\S]*"text"\s*:\s*"([\s\S]*)"[\s\S]*\}$/s, '$1'); // Remove JSON wrapper
+    responseText = responseText.trim();
+    
     console.log(`[${requestId}] ✅ AI response generated (${responseText.length} characters)`);
 
-    // Check if candidate agreed or wants to schedule
+    // Check if candidate agreed, wants to schedule, or rejected
     const candidateText = (context.currentMessage.text || '').toLowerCase();
     const agreedIndicators = ['yes', 'interested', 'sounds great', 'let\'s do it', 'i\'m in', 'i accept', 'i agree'];
     const scheduleIndicators = ['schedule', 'meeting', 'call', 'discuss', 'talk', 'interview'];
+    const rejectedIndicators = ['not interested', 'no thanks', 'no thank you', 'decline', 'pass', 'not a fit', "don't contact me"];
     
     const hasAgreed = agreedIndicators.some(indicator => candidateText.includes(indicator));
     const wantsToSchedule = scheduleIndicators.some(indicator => candidateText.includes(indicator));
+    const hasRejected = rejectedIndicators.some(indicator => candidateText.includes(indicator));
 
     // Update agent status based on response
     if (hasAgreed) {
@@ -268,6 +233,22 @@ Generate an appropriate response email that uses these advanced persuasion techn
       await convexClient.mutation(api.agents.updateAgentStatus, {
         agentId: agent._id,
         status: 'completed',
+      });
+    } else if (hasRejected) {
+      console.log(`[${requestId}] 🛑 Candidate rejected! Updating agent status to 'stopped'`);
+      await convexClient.mutation(api.agents.updateAgentStatus, {
+        agentId: agent._id,
+        status: 'stopped',
+      });
+      // Don't send a reply if they rejected
+      logRequestSuccess(requestId, 200, {
+        message: 'Candidate rejected, agent stopped',
+        agentStatus: 'stopped',
+      }, { duration: Date.now() - startTime });
+      return NextResponse.json({
+        success: true,
+        message: 'Candidate rejected, agent stopped',
+        agentStatus: 'stopped',
       });
     } else if (wantsToSchedule) {
       console.log(`[${requestId}] 📅 Candidate wants to schedule. Updating agent status to 'scheduling'`);
