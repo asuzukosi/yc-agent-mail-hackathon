@@ -115,9 +115,9 @@ export async function POST(request: NextRequest) {
       new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime()
     );
 
-    // Check for safe word "I think i love my job" (case insensitive)
+    // Check for safe word "chris rock" (case insensitive)
     const messageText = (fullMessage.text || '').toLowerCase();
-    const safeWord = 'i think i love my job';
+    const safeWord = 'chris rock';
     
     if (messageText.includes(safeWord)) {
       console.log(`[${requestId}] 🛑 Safe word detected in message!`);
