@@ -12,7 +12,7 @@ const CONTAINER_MOTION_PROPS = {
     hidden: {
       opacity: 0,
       transition: {
-        ease: 'easeOut',
+        ease: 'easeOut' as const,
         duration: 0.3,
         staggerChildren: 0.1,
         staggerDirection: -1,
@@ -22,7 +22,7 @@ const CONTAINER_MOTION_PROPS = {
       opacity: 1,
       transition: {
         delay: 0.2,
-        ease: 'easeOut',
+        ease: 'easeOut' as const,
         duration: 0.3,
         stagerDelay: 0.2,
         staggerChildren: 0.1,
@@ -30,9 +30,9 @@ const CONTAINER_MOTION_PROPS = {
       },
     },
   },
-  initial: 'hidden',
-  animate: 'visible',
-  exit: 'hidden',
+  initial: 'hidden' as const,
+  animate: 'visible' as const,
+  exit: 'hidden' as const,
 };
 
 const MESSAGE_MOTION_PROPS = {

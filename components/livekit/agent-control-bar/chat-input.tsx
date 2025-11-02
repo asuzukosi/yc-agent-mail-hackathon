@@ -11,15 +11,15 @@ const MOTION_PROPS = {
       marginBottom: 0,
     },
     visible: {
-      height: 'auto',
+      height: 'auto' as const,
       opacity: 1,
       marginBottom: 12,
     },
   },
-  initial: 'hidden',
+  initial: 'hidden' as const,
   transition: {
     duration: 0.3,
-    ease: 'easeOut',
+    ease: 'easeOut' as const,
   },
 };
 

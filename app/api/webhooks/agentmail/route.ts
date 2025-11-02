@@ -7,6 +7,10 @@ import { logRequestStart, logRequestSuccess, logRequestError, extractRequestCont
 
 const convexClient = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
+// Get base URL for generating meeting links
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://c1f8c3b12e14.ngrok.app');
+
 /**
  * AgentMail Webhook Handler
  * 
@@ -179,9 +183,38 @@ export async function POST(request: NextRequest) {
       throw new Error('Persuasion email agent not found');
     }
 
+    // Check if candidate agreed, wants to schedule, or rejected
+    const candidateText = (context.currentMessage.text || '').toLowerCase();
+    const agreedIndicators = ['yes', 'interested', 'sounds great', 'let\'s do it', 'i\'m in', 'i accept', 'i agree'];
+    const scheduleIndicators = ['schedule', 'meeting', 'call', 'discuss', 'talk', 'interview'];
+    const rejectedIndicators = ['not interested', 'no thanks', 'no thank you', 'decline', 'pass', 'not a fit', "don't contact me"];
+    
+    const hasAgreed = agreedIndicators.some(indicator => candidateText.includes(indicator));
+    const wantsToSchedule = scheduleIndicators.some(indicator => candidateText.includes(indicator));
+    const hasRejected = rejectedIndicators.some(indicator => candidateText.includes(indicator));
+
+    // Create a meeting if candidate wants to schedule or agreed
+    let meetingLink = null;
+    if (wantsToSchedule || hasAgreed) {
+      console.log(`[${requestId}] 📅 Creating meeting for candidate...`);
+      try {
+        const meetingId = await convexClient.mutation(api.meetings.createMeeting, {
+          campaignId: agent.campaign!._id,
+          candidateId: agent.targetCandidate!._id,
+          agentId: agent._id,
+          scheduledAt: Date.now() + (24 * 60 * 60 * 1000), // Schedule 1 day from now
+        });
+        
+        meetingLink = `${BASE_URL}/meetings/${meetingId}`;
+        console.log(`[${requestId}] ✅ Meeting created: ${meetingId}, link: ${meetingLink}`);
+      } catch (error) {
+        console.error(`[${requestId}] ❌ Failed to create meeting:`, error);
+      }
+    }
+
     // Generate response using Mastra agent
     console.log(`[${requestId}] 💭 Generating AI response...`);
-    const systemPrompt = `You are a persuasive recruitment agent. Write a SHORT, engaging email response to ${context.candidate.name} about the ${context.campaign.name} opportunity.
+    let systemPrompt = `You are a persuasive recruitment agent. Write a SHORT, engaging email response to ${context.candidate.name} about the ${context.campaign.name} opportunity.
 
 CANDIDATE: ${context.candidate.name}, ${context.candidate.title || ''} at ${context.candidate.company || ''}
 OPPORTUNITY: ${context.campaign.name}
@@ -193,9 +226,14 @@ IMPORTANT:
 - Keep it SHORT (100-200 words max)
 - Be conversational and persuasive, not pushy
 - Address their specific message with emotional intelligence
-- End with a clear call to action
+- End with a clear call to action`;
 
-Write ONLY the email body text, nothing else. No subject, no JSON, no explanations.`;
+    // Add meeting link to prompt if we created one
+    if (meetingLink) {
+      systemPrompt += `\n\nCRITICAL: Include this meeting link in your response: ${meetingLink}\nMake it natural and inviting, like "Here's the link to join our call: [link]"`;
+    }
+
+    systemPrompt += `\n\nWrite ONLY the email body text, nothing else. No subject, no JSON, no explanations.`;
 
     const response = await persuasionAgent.generate([
       {
@@ -216,16 +254,6 @@ Write ONLY the email body text, nothing else. No subject, no JSON, no explanatio
     responseText = responseText.trim();
     
     console.log(`[${requestId}] ✅ AI response generated (${responseText.length} characters)`);
-
-    // Check if candidate agreed, wants to schedule, or rejected
-    const candidateText = (context.currentMessage.text || '').toLowerCase();
-    const agreedIndicators = ['yes', 'interested', 'sounds great', 'let\'s do it', 'i\'m in', 'i accept', 'i agree'];
-    const scheduleIndicators = ['schedule', 'meeting', 'call', 'discuss', 'talk', 'interview'];
-    const rejectedIndicators = ['not interested', 'no thanks', 'no thank you', 'decline', 'pass', 'not a fit', "don't contact me"];
-    
-    const hasAgreed = agreedIndicators.some(indicator => candidateText.includes(indicator));
-    const wantsToSchedule = scheduleIndicators.some(indicator => candidateText.includes(indicator));
-    const hasRejected = rejectedIndicators.some(indicator => candidateText.includes(indicator));
 
     // Update agent status based on response
     if (hasAgreed) {

@@ -42,7 +42,7 @@ export const hyperspellTool = createTool({
       const response = await hyperspell.memories.search({
         query,
         answer: answer !== false, // Default to true if not specified
-        sources: sources && sources.length > 0 ? sources : undefined, // Use all sources if not specified
+        sources: sources && sources.length > 0 ? (sources as any) : undefined, // Use all sources if not specified
       });
 
       return {

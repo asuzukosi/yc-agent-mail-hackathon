@@ -72,7 +72,7 @@ export async function storeMemory(content: string, metadata?: { title?: string; 
         await hyperspell.memories.add({
             content: formattedContent,
             metadata: metadata || {},
-        });
+        } as any);
 
         return { success: true };
     } catch (error) {

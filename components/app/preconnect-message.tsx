@@ -12,7 +12,7 @@ const VIEW_MOTION_PROPS = {
     visible: {
       opacity: 1,
       transition: {
-        ease: 'easeIn',
+        ease: 'easeIn' as const,
         duration: 0.5,
         delay: 0.8,
       },
@@ -20,15 +20,15 @@ const VIEW_MOTION_PROPS = {
     hidden: {
       opacity: 0,
       transition: {
-        ease: 'easeIn',
+        ease: 'easeIn' as const,
         duration: 0.5,
         delay: 0,
       },
     },
   },
-  initial: 'hidden',
-  animate: 'visible',
-  exit: 'hidden',
+  initial: 'hidden' as const,
+  animate: 'visible' as const,
+  exit: 'hidden' as const,
 };
 
 interface PreConnectMessageProps {

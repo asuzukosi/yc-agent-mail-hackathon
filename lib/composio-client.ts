@@ -3,7 +3,7 @@ import { Composio } from '@composio/core';
 /**
  * Initialize Composio client
  */
-function getComposioClient(): Composio {
+function getComposioClient(): any {
   const apiKey = process.env.COMPOSIO_API_KEY;
   
   if (!apiKey) {

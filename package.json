@@ -53,6 +53,7 @@
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^3.25.76",
+    "zod-v4": "npm:zod@4.1.12",
     "zod-to-json-schema": "^3.24.6"
   },
   "devDependencies": {

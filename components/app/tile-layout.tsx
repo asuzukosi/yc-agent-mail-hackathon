@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 const MotionContainer = motion.create('div');
 
 const ANIMATION_TRANSITION = {
-  type: 'spring',
+  type: 'spring' as const,
   stiffness: 675,
   damping: 75,
   mass: 1,

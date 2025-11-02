@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { mastra } from '@/src/mastra/index';
 import { processJobDescriptionTool } from '@/src/mastra/tools/process-job-description-tool';
 import { researchWithPerplexity } from '@/lib/perplexity-client';
-import { searchLinkedInManual } from '@/lib/browser-use-client';
+// import { searchLinkedInManual } from '@/lib/browser-use-client'; // Dynamic import below to avoid zod version conflicts
 import { findEmailsForCandidates } from '@/lib/sixtyfour-client';
 import { RuntimeContext } from '@mastra/core/di';
 import { api } from '@/convex/_generated/api';
@@ -242,6 +242,8 @@ Generate the queries now, ensuring they are highly targeted and domain-specific.
             timestamp: Date.now(),
           });
 
+          // Dynamic import to avoid zod version conflicts during build
+          const { searchLinkedInManual } = await import('@/lib/browser-use-client');
           const allLinkedInCandidates = await searchLinkedInManual(searchQueries);
 
           console.log(`[${requestId}] [Step 4/7] ✅ Completed: Found ${allLinkedInCandidates.length} candidates`);
